@@ -24,10 +24,12 @@ class App extends PureComponent {
     },
     page: 1,
     sort: "",
+    minPrice: 0,
+    maxPrice: 999,
   };
 
   stringifyQuery = (query) => {
-    const queryStr = queryString.stringify(query);
+    const queryStr = queryString.stringify(query, { skipEmptyString: true });
     return queryStr ? `?${queryStr}` : "";
   };
 
@@ -39,11 +41,21 @@ class App extends PureComponent {
     if (prevState.page !== this.state.page) {
       this.fetchProducts();
     }
+    if (
+      prevState.minPrice !== this.state.minPrice ||
+      prevState.maxPrice !== this.state.maxPrice
+    ) {
+      this.fetchProducts();
+    }
   }
 
   fetchProducts() {
     this.setState({ loading: true });
-    const query = this.stringifyQuery({ page: this.state.page });
+    const query = this.stringifyQuery({
+      page: this.state.page,
+      maxPrice: +this.state.maxPrice,
+      minPrice: +this.state.minPrice,
+    });
     this.productsService
       .fetchProducts(query)
       .then(({ data }) =>
@@ -59,14 +71,24 @@ class App extends PureComponent {
 
   onSort = () => {
     const { sort, products } = this.state;
-    switch (sort) {
-      case "lowest":
-        return [...products].sort((a, b) => a.price - b.price);
-      case "highest":
-        return [...products].sort((a, b) => b.price - a.price);
-      default:
-        return products;
-    }
+    // switch (sort) {
+    //   case "lowest":
+    //     return [...products].sort((a, b) => a.price - b.price);
+    //   case "highest":
+    //     return [...products].sort((a, b) => b.price - a.price);
+    //   default:
+    //     return products;
+    // }
+    return [...products].sort((a, b) => {
+      switch (sort) {
+        case "lowest":
+          return a.price - b.price;
+        case "highest":
+          return b.price - a.price;
+        default:
+          return a.price - b.price;
+      }
+    });
   };
 
   goToPage = (event) => {
@@ -82,6 +104,10 @@ class App extends PureComponent {
     this.setState((prevState) => this.setState({ page: prevState.page + 1 }));
   };
 
+  onHandleSubmit = ({ minPrice, maxPrice }) => {
+    this.setState({ minPrice, maxPrice, page: 1 });
+  };
+
   render() {
     const { pager, loading, errors, sort } = this.state;
     const products = this.onSort();
@@ -95,7 +121,7 @@ class App extends PureComponent {
             <div className="col-3 d-none d-lg-block mt-3">
               <div className="card">
                 <div className="card-body">
-                  <PriceFilter />
+                  <PriceFilter onHandleSubmit={this.onHandleSubmit} />
                 </div>
               </div>
             </div>
